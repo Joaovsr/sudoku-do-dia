@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/route_transitions.dart';
 import '../../app/theme.dart';
 import '../../core/models/day_record.dart';
 import '../../core/providers/calendar_provider.dart';
@@ -20,21 +21,16 @@ class CalendarPage extends ConsumerWidget {
   int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
 
-  // Dart: weekday 1=seg ... 7=dom. Grid inicia no dom (indice 0).
-  // Conversao: dom=0, seg=1, ..., sab=6
   int _firstWeekdayIndex(int year, int month) =>
       DateTime(year, month, 1).weekday % 7;
 
   void _selectDay(BuildContext context, WidgetRef ref, DateTime date) {
     final today = DateTime.now();
     final todayNorm = DateTime(today.year, today.month, today.day);
-    if (date.isAfter(todayNorm)) return; // dias futuros nao sao jogaveis
+    if (date.isAfter(todayNorm)) return;
 
     ref.read(selectedDateProvider.notifier).state = date;
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const BoardPage()),
-    );
+    Navigator.push(context, fadeSlideRoute(const BoardPage()));
   }
 
   @override
@@ -45,13 +41,13 @@ class CalendarPage extends ConsumerWidget {
     final selectedDate = ref.watch(selectedDateProvider);
     final recordsAsync = ref.watch(calendarRecordsProvider);
     final records = recordsAsync.valueOrNull ?? {};
+    final c = context.colors;
 
     final year = viewed.year;
     final month = viewed.month;
     final daysInMonth = _daysInMonth(year, month);
     final firstIndex = _firstWeekdayIndex(year, month);
 
-    // Total de celulas no grid (preenchido com zeros onde nao ha dia)
     final totalCells = firstIndex + daysInMonth;
     final rows = (totalCells / 7).ceil();
 
@@ -66,21 +62,20 @@ class CalendarPage extends ConsumerWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back),
-                    color: KuroTheme.clueColor,
+                    color: c.clueColor,
                     onPressed: () => Navigator.pop(context),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Jogos anteriores',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: c.clueColor,
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                  // Espaco simetrico ao botao de voltar
                   const SizedBox(width: 48),
                 ],
               ),
@@ -94,25 +89,30 @@ class CalendarPage extends ConsumerWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.chevron_left),
-                    color: KuroTheme.timerColor,
+                    color: c.timerColor,
                     onPressed: () {
                       final prev = DateTime(year, month - 1);
                       ref.read(viewedMonthProvider.notifier).state = prev;
                     },
                   ),
-                  Text(
-                    '${_monthNames[month]} de $year',
-                    style: TextStyle(
-                      color: KuroTheme.clueColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                  // AnimatedSwitcher para transicao de mes
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Text(
+                      '${_monthNames[month]} de $year',
+                      key: ValueKey('$year-$month'),
+                      style: TextStyle(
+                        color: c.clueColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.chevron_right),
                     color: _canGoNext(viewed, todayNorm)
-                        ? KuroTheme.timerColor
-                        : KuroTheme.borderThin,
+                        ? c.timerColor
+                        : c.borderThin,
                     onPressed: _canGoNext(viewed, todayNorm)
                         ? () {
                             final next = DateTime(year, month + 1);
@@ -136,11 +136,11 @@ class CalendarPage extends ConsumerWidget {
                       label,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: KuroTheme.timerColor,
+                        color: c.timerColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         decoration: TextDecoration.underline,
-                        decorationColor: KuroTheme.timerColor,
+                        decorationColor: c.timerColor,
                       ),
                     ),
                   );
@@ -150,47 +150,51 @@ class CalendarPage extends ConsumerWidget {
 
             const SizedBox(height: 12),
 
-            // ── Grid de dias ─────────────────────────────────────────────
+            // ── Grid de dias com transicao ──────────────────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: List.generate(rows, (rowIndex) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      children: List.generate(7, (colIndex) {
-                        final cellIndex = rowIndex * 7 + colIndex;
-                        final dayNumber = cellIndex - firstIndex + 1;
-                        final isValidDay =
-                            dayNumber >= 1 && dayNumber <= daysInMonth;
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: Column(
+                  key: ValueKey('grid-$year-$month'),
+                  children: List.generate(rows, (rowIndex) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: List.generate(7, (colIndex) {
+                          final cellIndex = rowIndex * 7 + colIndex;
+                          final dayNumber = cellIndex - firstIndex + 1;
+                          final isValidDay =
+                              dayNumber >= 1 && dayNumber <= daysInMonth;
 
-                        if (!isValidDay) {
-                          return const Expanded(child: SizedBox());
-                        }
+                          if (!isValidDay) {
+                            return const Expanded(child: SizedBox());
+                          }
 
-                        final cellDate = DateTime(year, month, dayNumber);
-                        final isToday = cellDate == todayNorm;
-                        final isFuture = cellDate.isAfter(todayNorm);
-                        final isSelected = cellDate == selectedDate;
-                        final dateKey =
-                            '$year-${month.toString().padLeft(2, '0')}-${dayNumber.toString().padLeft(2, '0')}';
-                        final dayStatus = records[dateKey];
+                          final cellDate = DateTime(year, month, dayNumber);
+                          final isToday = cellDate == todayNorm;
+                          final isFuture = cellDate.isAfter(todayNorm);
+                          final isSelected = cellDate == selectedDate;
+                          final dateKey =
+                              '$year-${month.toString().padLeft(2, '0')}-${dayNumber.toString().padLeft(2, '0')}';
+                          final dayStatus = records[dateKey];
 
-                        return Expanded(
-                          child: _DayCell(
-                            day: dayNumber,
-                            isToday: isToday,
-                            isFuture: isFuture,
-                            isSelected: isSelected,
-                            status: dayStatus,
-                            onTap: () =>
-                                _selectDay(context, ref, cellDate),
-                          ),
-                        );
-                      }),
-                    ),
-                  );
-                }),
+                          return Expanded(
+                            child: _DayCell(
+                              day: dayNumber,
+                              isToday: isToday,
+                              isFuture: isFuture,
+                              isSelected: isSelected,
+                              status: dayStatus,
+                              onTap: () =>
+                                  _selectDay(context, ref, cellDate),
+                            ),
+                          );
+                        }),
+                      ),
+                    );
+                  }),
+                ),
               ),
             ),
           ],
@@ -224,19 +228,19 @@ class _DayCell extends StatelessWidget {
     required this.onTap,
   });
 
-  Color get _textColor {
-    if (isFuture) return KuroTheme.borderThick;
-    if (isToday) return KuroTheme.userColor;
-    return KuroTheme.clueColor;
+  Color _textColor(AppColors c) {
+    if (isFuture) return c.futureDayText;
+    if (isToday) return c.userColor;
+    return c.clueColor;
   }
 
-  Color? get _dotColor {
+  Color? _dotColor(AppColors c) {
     if (status == null) return null;
     switch (status!) {
       case DayStatus.completed:
-        return const Color(0xFF4CAF50); // verde
+        return c.completedDayDot;
       case DayStatus.inProgress:
-        return const Color(0xFFFFC107); // amarelo
+        return c.inProgressDayDot;
       case DayStatus.notStarted:
         return null;
     }
@@ -244,13 +248,15 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+
     return GestureDetector(
       onTap: isFuture ? null : onTap,
       child: Container(
         height: 40,
         decoration: isSelected
             ? BoxDecoration(
-                border: Border.all(color: KuroTheme.userColor, width: 1),
+                border: Border.all(color: c.userColor, width: 1),
                 borderRadius: BorderRadius.circular(6),
               )
             : null,
@@ -260,18 +266,18 @@ class _DayCell extends StatelessWidget {
             Text(
               '$day',
               style: TextStyle(
-                color: _textColor,
+                color: _textColor(c),
                 fontSize: 16,
                 fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
               ),
             ),
-            if (_dotColor != null)
+            if (_dotColor(c) != null)
               Container(
                 width: 5,
                 height: 5,
                 margin: const EdgeInsets.only(top: 2),
                 decoration: BoxDecoration(
-                  color: _dotColor,
+                  color: _dotColor(c),
                   shape: BoxShape.circle,
                 ),
               ),

@@ -27,18 +27,18 @@ class BoardHeader extends ConsumerWidget {
     final elapsed = ref.watch(gameProvider.select((s) => s.elapsed));
     final isComplete = ref.watch(gameProvider.select((s) => s.isComplete));
     final puzzleDate = ref.watch(selectedDateProvider);
+    final c = context.colors;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Titulo + data do puzzle
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'sudoku do dia',
               style: TextStyle(
-                color: KuroTheme.clueColor,
+                color: c.clueColor,
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.5,
@@ -48,7 +48,7 @@ class BoardHeader extends ConsumerWidget {
             Text(
               _formatDate(puzzleDate),
               style: TextStyle(
-                color: KuroTheme.timerColor,
+                color: c.timerColor,
                 fontSize: 12,
                 letterSpacing: 1.2,
               ),
@@ -56,23 +56,22 @@ class BoardHeader extends ConsumerWidget {
           ],
         ),
 
-        // Timer / conclusao
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
           child: isComplete
               ? Row(
                   key: const ValueKey('complete'),
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.check_rounded,
-                      color: Colors.greenAccent,
+                      color: c.successColor,
                       size: 18,
                     ),
                     const SizedBox(width: 6),
                     Text(
                       _formatElapsed(elapsed),
-                      style: const TextStyle(
-                        color: Colors.greenAccent,
+                      style: TextStyle(
+                        color: c.successColor,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 2,
@@ -84,7 +83,7 @@ class BoardHeader extends ConsumerWidget {
                   key: const ValueKey('timer'),
                   _formatElapsed(elapsed),
                   style: TextStyle(
-                    color: KuroTheme.timerColor,
+                    color: c.timerColor,
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                     letterSpacing: 2,

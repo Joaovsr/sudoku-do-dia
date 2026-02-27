@@ -17,7 +17,6 @@ class NumpadWidget extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Numeros 1-9 em grid 3x3
         for (int row = 0; row < 3; row++)
           Row(
             children: [
@@ -30,7 +29,6 @@ class NumpadWidget extends ConsumerWidget {
                 ),
             ],
           ),
-        // Linha de acoes: undo + erase
         const SizedBox(height: 8),
         Row(
           children: [
@@ -54,7 +52,7 @@ class NumpadWidget extends ConsumerWidget {
   }
 }
 
-class _NumpadButton extends StatelessWidget {
+class _NumpadButton extends StatefulWidget {
   final String? label;
   final IconData? icon;
   final VoidCallback onTap;
@@ -73,28 +71,50 @@ class _NumpadButton extends StatelessWidget {
         isAction = true;
 
   @override
+  State<_NumpadButton> createState() => _NumpadButtonState();
+}
+
+class _NumpadButtonState extends State<_NumpadButton> {
+  bool _pressed = false;
+
+  @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+
     return Padding(
       padding: const EdgeInsets.all(4),
-      child: Material(
-        color: isAction ? KuroTheme.numpadAction : KuroTheme.numpadBg,
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: onTap,
-          child: SizedBox(
-            height: 56,
-            child: Center(
-              child: icon != null
-                  ? Icon(icon, color: KuroTheme.timerColor, size: 22)
-                  : Text(
-                      label!,
-                      style: const TextStyle(
-                        color: KuroTheme.numpadText,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) {
+          setState(() => _pressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _pressed = false),
+        child: AnimatedScale(
+          scale: _pressed ? 0.92 : 1.0,
+          duration: const Duration(milliseconds: 80),
+          curve: Curves.easeInOut,
+          child: AnimatedOpacity(
+            opacity: _pressed ? 0.7 : 1.0,
+            duration: const Duration(milliseconds: 80),
+            child: Material(
+              color: widget.isAction ? c.numpadAction : c.numpadBg,
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 56,
+                child: Center(
+                  child: widget.icon != null
+                      ? Icon(widget.icon, color: c.timerColor, size: 22)
+                      : Text(
+                          widget.label!,
+                          style: TextStyle(
+                            color: c.numpadText,
+                            fontSize: 24,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                ),
+              ),
             ),
           ),
         ),

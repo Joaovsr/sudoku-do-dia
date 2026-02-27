@@ -8,8 +8,8 @@ class SudokuCell extends StatelessWidget {
   final int value; // 0 = vazio
   final bool isClue;
   final bool isSelected;
-  final bool isHighlighted; // mesma linha/coluna/bloco
-  final bool hasSameNumber; // mesmo valor que a célula selecionada
+  final bool isHighlighted;
+  final bool hasSameNumber;
   final bool hasConflict;
   final VoidCallback onTap;
 
@@ -28,14 +28,14 @@ class SudokuCell extends StatelessWidget {
 
   // ── Bordas ────────────────────────────────────────────────────────────────
 
-  Border _border() {
+  Border _border(AppColors c) {
     BorderSide right = BorderSide.none;
     BorderSide bottom = BorderSide.none;
 
     if (col < 8) {
       final isBlockBoundary = col == 2 || col == 5;
       right = BorderSide(
-        color: isBlockBoundary ? KuroTheme.borderThick : KuroTheme.borderThin,
+        color: isBlockBoundary ? c.borderThick : c.borderThin,
         width: isBlockBoundary ? 2.0 : 0.5,
       );
     }
@@ -43,7 +43,7 @@ class SudokuCell extends StatelessWidget {
     if (row < 8) {
       final isBlockBoundary = row == 2 || row == 5;
       bottom = BorderSide(
-        color: isBlockBoundary ? KuroTheme.borderThick : KuroTheme.borderThin,
+        color: isBlockBoundary ? c.borderThick : c.borderThin,
         width: isBlockBoundary ? 2.0 : 0.5,
       );
     }
@@ -53,46 +53,54 @@ class SudokuCell extends StatelessWidget {
 
   // ── Cor de fundo ──────────────────────────────────────────────────────────
 
-  Color _backgroundColor() {
-    if (isSelected) return KuroTheme.cellSelected;
-    if (hasSameNumber) return KuroTheme.cellSameNumber;
-    if (isHighlighted) return KuroTheme.cellHighlighted;
+  Color _backgroundColor(AppColors c) {
+    if (isSelected) return c.cellSelected;
+    if (hasSameNumber) return c.cellSameNumber;
+    if (isHighlighted) return c.cellHighlighted;
     return Colors.transparent;
   }
 
   // ── Cor do texto ──────────────────────────────────────────────────────────
 
-  Color _textColor() {
-    if (isClue) return KuroTheme.clueColor;
-    if (hasConflict) return KuroTheme.errorColor;
-    return KuroTheme.userColor;
+  Color _textColor(AppColors c) {
+    if (isClue) return c.clueColor;
+    if (hasConflict) return c.errorColor;
+    return c.userColor;
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         decoration: BoxDecoration(
-          color: _backgroundColor(),
-          border: _border(),
+          color: _backgroundColor(c),
+          border: _border(c),
         ),
         child: Center(
-          child: value != 0
-              ? AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 120),
-                  style: TextStyle(
-                    color: _textColor(),
-                    fontSize: 20,
-                    fontWeight:
-                        isClue ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                  child: Text(value.toString()),
-                )
-              : const SizedBox.shrink(),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            transitionBuilder: (child, animation) => ScaleTransition(
+              scale: animation,
+              child: child,
+            ),
+            child: value != 0
+                ? Text(
+                    value.toString(),
+                    key: ValueKey(value),
+                    style: TextStyle(
+                      color: _textColor(c),
+                      fontSize: 20,
+                      fontWeight: isClue ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  )
+                : const SizedBox.shrink(key: ValueKey(0)),
+          ),
         ),
       ),
     );

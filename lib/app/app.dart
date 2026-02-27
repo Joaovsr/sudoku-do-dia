@@ -11,14 +11,16 @@ class App extends StatelessWidget {
   Widget build(BuildContext context) {
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarBrightness: Brightness.dark,
-      statusBarIconBrightness: Brightness.light,
+      statusBarBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
     ));
 
     return MaterialApp(
       title: 'Sudoku do Dia',
       debugShowCheckedModeBanner: false,
-      theme: KuroTheme.theme,
+      theme: buildLightTheme(),
+      darkTheme: buildDarkTheme(),
+      themeMode: ThemeMode.light,
       home: const HomePage(),
     );
   }

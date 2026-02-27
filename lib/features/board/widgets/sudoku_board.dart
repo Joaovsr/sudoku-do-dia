@@ -17,7 +17,7 @@ class SudokuBoard extends ConsumerWidget {
       aspectRatio: 1.0,
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: KuroTheme.borderThick, width: 2.5),
+          border: Border.all(color: context.colors.borderThick, width: 2.5),
         ),
         child: Column(
           children: List.generate(9, (row) {

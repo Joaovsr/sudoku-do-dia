@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/route_transitions.dart';
 import '../../app/theme.dart';
 import '../../core/providers/calendar_provider.dart';
 import '../board/board_page.dart';
@@ -17,25 +18,20 @@ class HomePage extends ConsumerWidget {
     final now = DateTime.now();
     ref.read(selectedDateProvider.notifier).state =
         DateTime(now.year, now.month, now.day);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const BoardPage()),
-    );
+    Navigator.push(context, fadeSlideRoute(const BoardPage()));
   }
 
   void _openCalendar(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     ref.read(viewedMonthProvider.notifier).state =
         DateTime(now.year, now.month);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const CalendarPage()),
-    );
+    Navigator.push(context, fadeSlideRoute(const CalendarPage()));
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final today = DateTime.now();
+    final c = context.colors;
 
     return Scaffold(
       body: SafeArea(
@@ -45,12 +41,11 @@ class HomePage extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Titulo
               Text(
                 'sudoku do dia',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: KuroTheme.clueColor,
+                  color: c.clueColor,
                   fontSize: 26,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 2,
@@ -59,16 +54,14 @@ class HomePage extends ConsumerWidget {
 
               const SizedBox(height: 48),
 
-              // Card jogo diario
               Container(
                 decoration: BoxDecoration(
-                  border: Border.all(color: KuroTheme.borderThick, width: 1.5),
+                  border: Border.all(color: c.borderThick, width: 1.5),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Row(
                   children: [
-                    // Label + data
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,7 +69,7 @@ class HomePage extends ConsumerWidget {
                           Text(
                             'Jogo diario',
                             style: TextStyle(
-                              color: KuroTheme.clueColor,
+                              color: c.clueColor,
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -85,7 +78,7 @@ class HomePage extends ConsumerWidget {
                           Text(
                             _formatDate(today),
                             style: TextStyle(
-                              color: KuroTheme.timerColor,
+                              color: c.timerColor,
                               fontSize: 13,
                             ),
                           ),
@@ -93,12 +86,11 @@ class HomePage extends ConsumerWidget {
                       ),
                     ),
 
-                    // Botao Jogar
                     FilledButton(
                       onPressed: () => _playToday(context, ref),
                       style: FilledButton.styleFrom(
-                        backgroundColor: KuroTheme.userColor,
-                        foregroundColor: KuroTheme.background,
+                        backgroundColor: c.userColor,
+                        foregroundColor: c.background,
                         padding: const EdgeInsets.symmetric(
                             horizontal: 20, vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -119,18 +111,17 @@ class HomePage extends ConsumerWidget {
 
               const SizedBox(height: 32),
 
-              // Jogos anteriores
               TextButton.icon(
                 onPressed: () => _openCalendar(context, ref),
                 icon: Icon(
                   Icons.calendar_month_outlined,
-                  color: KuroTheme.timerColor,
+                  color: c.timerColor,
                   size: 20,
                 ),
                 label: Text(
                   'Jogos anteriores',
                   style: TextStyle(
-                    color: KuroTheme.timerColor,
+                    color: c.timerColor,
                     fontSize: 15,
                   ),
                 ),
