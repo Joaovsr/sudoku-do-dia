@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../features/board/board_page.dart';
+import '../features/home/home_page.dart';
 import 'theme.dart';
 
 class App extends StatelessWidget {
@@ -19,7 +19,7 @@ class App extends StatelessWidget {
       title: 'Sudoku do Dia',
       debugShowCheckedModeBanner: false,
       theme: KuroTheme.theme,
-      home: const BoardPage(),
+      home: const HomePage(),
     );
   }
 }

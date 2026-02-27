@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../generator/puzzle_generator.dart';
 import '../models/sudoku_puzzle.dart';
+import 'calendar_provider.dart';
 
 // ── Estado do Jogo ────────────────────────────────────────────────────────────
 
@@ -97,8 +98,8 @@ class GameNotifier extends Notifier<GameState> {
   GameState build() {
     ref.onDispose(() => _timer?.cancel());
 
-    final today = DateTime.now();
-    final seed = DateTime(today.year, today.month, today.day).millisecondsSinceEpoch;
+    final date = ref.watch(selectedDateProvider);
+    final seed = date.millisecondsSinceEpoch;
     final (puzzle, solution) = PuzzleGenerator.generate(seed);
 
     return GameState(
