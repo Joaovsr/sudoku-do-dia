@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
+import '../../core/models/day_record.dart';
 import '../../core/providers/calendar_provider.dart';
+import '../../core/providers/repository_provider.dart';
 import '../board/board_page.dart';
 
 class CalendarPage extends ConsumerWidget {
@@ -41,6 +43,8 @@ class CalendarPage extends ConsumerWidget {
     final today = DateTime.now();
     final todayNorm = DateTime(today.year, today.month, today.day);
     final selectedDate = ref.watch(selectedDateProvider);
+    final recordsAsync = ref.watch(calendarRecordsProvider);
+    final records = recordsAsync.valueOrNull ?? {};
 
     final year = viewed.year;
     final month = viewed.month;
@@ -168,6 +172,9 @@ class CalendarPage extends ConsumerWidget {
                         final isToday = cellDate == todayNorm;
                         final isFuture = cellDate.isAfter(todayNorm);
                         final isSelected = cellDate == selectedDate;
+                        final dateKey =
+                            '$year-${month.toString().padLeft(2, '0')}-${dayNumber.toString().padLeft(2, '0')}';
+                        final dayStatus = records[dateKey];
 
                         return Expanded(
                           child: _DayCell(
@@ -175,6 +182,7 @@ class CalendarPage extends ConsumerWidget {
                             isToday: isToday,
                             isFuture: isFuture,
                             isSelected: isSelected,
+                            status: dayStatus,
                             onTap: () =>
                                 _selectDay(context, ref, cellDate),
                           ),
@@ -204,6 +212,7 @@ class _DayCell extends StatelessWidget {
   final bool isToday;
   final bool isFuture;
   final bool isSelected;
+  final DayStatus? status;
   final VoidCallback onTap;
 
   const _DayCell({
@@ -211,6 +220,7 @@ class _DayCell extends StatelessWidget {
     required this.isToday,
     required this.isFuture,
     required this.isSelected,
+    this.status,
     required this.onTap,
   });
 
@@ -218,6 +228,18 @@ class _DayCell extends StatelessWidget {
     if (isFuture) return KuroTheme.borderThick;
     if (isToday) return KuroTheme.userColor;
     return KuroTheme.clueColor;
+  }
+
+  Color? get _dotColor {
+    if (status == null) return null;
+    switch (status!) {
+      case DayStatus.completed:
+        return const Color(0xFF4CAF50); // verde
+      case DayStatus.inProgress:
+        return const Color(0xFFFFC107); // amarelo
+      case DayStatus.notStarted:
+        return null;
+    }
   }
 
   @override
@@ -232,15 +254,28 @@ class _DayCell extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               )
             : null,
-        child: Center(
-          child: Text(
-            '$day',
-            style: TextStyle(
-              color: _textColor,
-              fontSize: 16,
-              fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '$day',
+              style: TextStyle(
+                color: _textColor,
+                fontSize: 16,
+                fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+              ),
             ),
-          ),
+            if (_dotColor != null)
+              Container(
+                width: 5,
+                height: 5,
+                margin: const EdgeInsets.only(top: 2),
+                decoration: BoxDecoration(
+                  color: _dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
         ),
       ),
     );

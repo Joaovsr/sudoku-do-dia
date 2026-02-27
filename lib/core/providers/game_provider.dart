@@ -3,14 +3,16 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../generator/puzzle_generator.dart';
+import '../models/day_record.dart';
 import '../models/sudoku_puzzle.dart';
 import 'calendar_provider.dart';
+import 'repository_provider.dart';
 
 // ── Estado do Jogo ────────────────────────────────────────────────────────────
 
 class GameState {
   final SudokuPuzzle puzzle;
-  final List<List<int>> userBoard; // 0 = vazio, 1-9 = entrada do usuário
+  final List<List<int>> userBoard; // 0 = vazio, 1-9 = entrada do usuario
   final int? selectedRow;
   final int? selectedCol;
   final Set<(int, int)> conflicts;
@@ -18,6 +20,7 @@ class GameState {
   final Duration elapsed;
   final bool timerRunning;
   final bool isComplete;
+  final bool isLoading;
 
   const GameState({
     required this.puzzle,
@@ -29,6 +32,7 @@ class GameState {
     this.elapsed = Duration.zero,
     this.timerRunning = false,
     this.isComplete = false,
+    this.isLoading = false,
   });
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
@@ -70,6 +74,7 @@ class GameState {
     Duration? elapsed,
     bool? timerRunning,
     bool? isComplete,
+    bool? isLoading,
   }) {
     return GameState(
       puzzle: puzzle ?? this.puzzle,
@@ -81,6 +86,7 @@ class GameState {
       elapsed: elapsed ?? this.elapsed,
       timerRunning: timerRunning ?? this.timerRunning,
       isComplete: isComplete ?? this.isComplete,
+      isLoading: isLoading ?? this.isLoading,
     );
   }
 }
@@ -93,40 +99,79 @@ class _Unset {
 
 class GameNotifier extends Notifier<GameState> {
   Timer? _timer;
+  bool _disposed = false;
 
   @override
   GameState build() {
-    ref.onDispose(() => _timer?.cancel());
+    _disposed = false;
+    ref.onDispose(() {
+      _disposed = true;
+      _timer?.cancel();
+    });
 
     final date = ref.watch(selectedDateProvider);
     final seed = date.millisecondsSinceEpoch;
     final (puzzle, solution) = PuzzleGenerator.generate(seed);
 
-    return GameState(
+    final initial = GameState(
       puzzle: SudokuPuzzle(clues: puzzle, solution: solution),
       userBoard: List.generate(9, (_) => List.filled(9, 0)),
+      isLoading: true,
     );
+
+    // Carrega estado salvo de forma assincrona
+    Future.microtask(() => _loadSavedState(date));
+
+    return initial;
   }
 
-  // ── Seleção de célula ─────────────────────────────────────────────────────
+  Future<void> _loadSavedState(DateTime date) async {
+    try {
+      final repo = await ref.read(repositoryProvider.future);
+      if (_disposed) return;
+
+      final record = repo.getRecord(date);
+      if (_disposed) return;
+
+      if (record != null && record.status != DayStatus.notStarted) {
+        final newBoard = record.boardState;
+        final conflicts = _computeConflicts(newBoard, state.puzzle.clues);
+        final complete = _checkComplete(newBoard, state.puzzle.clues, conflicts);
+
+        state = state.copyWith(
+          userBoard: newBoard,
+          conflicts: conflicts,
+          elapsed: record.elapsed,
+          isComplete: complete,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(isLoading: false);
+      }
+    } catch (_) {
+      if (!_disposed) {
+        state = state.copyWith(isLoading: false);
+      }
+    }
+  }
+
+  // ── Selecao de celula ─────────────────────────────────────────────────────
 
   void selectCell(int row, int col) {
     if (state.isCellSelected(row, col)) {
-      // toque duplo na mesma célula → deseleciona
       state = state.copyWith(selectedRow: null, selectedCol: null);
     } else {
       state = state.copyWith(selectedRow: row, selectedCol: col);
     }
   }
 
-  // ── Input numérico ────────────────────────────────────────────────────────
+  // ── Input numerico ────────────────────────────────────────────────────────
 
   void inputNumber(int number) {
     if (!state.hasSelection) return;
     final row = state.selectedRow!;
     final col = state.selectedCol!;
 
-    // células de pista são imutáveis
     if (state.puzzle.isClue(row, col)) return;
 
     _startTimerIfNeeded();
@@ -148,9 +193,10 @@ class GameNotifier extends Notifier<GameState> {
     );
 
     if (complete) _timer?.cancel();
+    _saveAsync();
   }
 
-  // ── Limpar célula selecionada ─────────────────────────────────────────────
+  // ── Limpar celula selecionada ─────────────────────────────────────────────
 
   void clearCell() {
     if (!state.hasSelection) return;
@@ -181,6 +227,38 @@ class GameNotifier extends Notifier<GameState> {
       selectedCol: col,
       isComplete: false,
     );
+
+    _saveAsync();
+  }
+
+  // ── Persistencia ────────────────────────────────────────────────────────
+
+  Future<void> _saveAsync() async {
+    final date = ref.read(selectedDateProvider);
+    final record = DayRecord(
+      date: date,
+      status: state.isComplete ? DayStatus.completed : _deriveStatus(),
+      boardState: state.userBoard,
+      elapsed: state.elapsed,
+    );
+
+    try {
+      final repo = await ref.read(repositoryProvider.future);
+      if (!_disposed) {
+        await repo.saveRecord(record);
+      }
+    } catch (_) {
+      // Falha silenciosa — o jogo continua funcionando sem persistencia
+    }
+  }
+
+  DayStatus _deriveStatus() {
+    for (int r = 0; r < 9; r++) {
+      for (int c = 0; c < 9; c++) {
+        if (state.userBoard[r][c] != 0) return DayStatus.inProgress;
+      }
+    }
+    return DayStatus.notStarted;
   }
 
   // ── Timer ─────────────────────────────────────────────────────────────────
@@ -200,13 +278,10 @@ class GameNotifier extends Notifier<GameState> {
   static List<List<int>> _copyBoard(List<List<int>> board) =>
       List.generate(9, (r) => List<int>.from(board[r]));
 
-  /// Detecta conflitos no tabuleiro combinado (pistas + entradas do usuário).
-  /// Apenas células do usuário são marcadas como conflito.
   static Set<(int, int)> _computeConflicts(
     List<List<int>> userBoard,
     List<List<int>> clues,
   ) {
-    // tabuleiro efetivo: pista tem prioridade
     List<int> effective(int r) => List.generate(
           9,
           (c) => clues[r][c] != 0 ? clues[r][c] : userBoard[r][c],
@@ -219,11 +294,10 @@ class GameNotifier extends Notifier<GameState> {
       for (int c = 0; c < 9; c++) {
         final val = row[c];
         if (val == 0) continue;
-        if (clues[r][c] != 0) continue; // pistas nunca são marcadas como erro
+        if (clues[r][c] != 0) continue;
 
         bool conflict = false;
 
-        // linha
         for (int cc = 0; cc < 9; cc++) {
           if (cc != c && effective(r)[cc] == val) {
             conflict = true;
@@ -232,7 +306,6 @@ class GameNotifier extends Notifier<GameState> {
         }
 
         if (!conflict) {
-          // coluna
           for (int rr = 0; rr < 9; rr++) {
             if (rr != r && effective(rr)[c] == val) {
               conflict = true;
@@ -242,7 +315,6 @@ class GameNotifier extends Notifier<GameState> {
         }
 
         if (!conflict) {
-          // bloco 3x3
           final br = (r ~/ 3) * 3;
           final bc = (c ~/ 3) * 3;
           outer:
