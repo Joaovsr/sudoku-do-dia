@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/route_transitions.dart';
 import '../../app/theme.dart';
 import '../../core/providers/calendar_provider.dart';
+import '../../core/providers/theme_provider.dart';
 import '../board/board_page.dart';
 import '../calendar/calendar_page.dart';
 
@@ -28,19 +29,67 @@ class HomePage extends ConsumerWidget {
     Navigator.push(context, fadeSlideRoute(const CalendarPage()));
   }
 
+  void _cycleTheme(WidgetRef ref) {
+    final current = ref.read(appThemeModeProvider);
+    final next = switch (current) {
+      AppThemeMode.auto => AppThemeMode.light,
+      AppThemeMode.light => AppThemeMode.dark,
+      AppThemeMode.dark => AppThemeMode.auto,
+    };
+    ref.read(appThemeModeProvider.notifier).state = next;
+  }
+
+  IconData _themeIcon(AppThemeMode mode) => switch (mode) {
+        AppThemeMode.auto => Icons.brightness_auto,
+        AppThemeMode.light => Icons.light_mode,
+        AppThemeMode.dark => Icons.dark_mode,
+      };
+
+  String _themeLabel(AppThemeMode mode) => switch (mode) {
+        AppThemeMode.auto => 'Auto',
+        AppThemeMode.light => 'Claro',
+        AppThemeMode.dark => 'Escuro',
+      };
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final today = DateTime.now();
     final c = context.colors;
+    final themeMode = ref.watch(appThemeModeProvider);
 
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const SizedBox(height: 16),
+
+              // Botao de tema no canto superior direito
+              Align(
+                alignment: Alignment.centerRight,
+                child: IconButton(
+                  onPressed: () => _cycleTheme(ref),
+                  tooltip: _themeLabel(themeMode),
+                  icon: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, animation) => ScaleTransition(
+                      scale: animation,
+                      child: child,
+                    ),
+                    child: Icon(
+                      _themeIcon(themeMode),
+                      key: ValueKey(themeMode),
+                      color: c.timerColor,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+
+              const Spacer(),
+
               Text(
                 'sudoku do dia',
                 textAlign: TextAlign.center,
@@ -67,7 +116,7 @@ class HomePage extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Jogo diario',
+                            'Jogo dirio',
                             style: TextStyle(
                               color: c.clueColor,
                               fontSize: 16,
@@ -126,6 +175,8 @@ class HomePage extends ConsumerWidget {
                   ),
                 ),
               ),
+
+              const Spacer(),
             ],
           ),
         ),

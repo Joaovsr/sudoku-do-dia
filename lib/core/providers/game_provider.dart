@@ -21,6 +21,9 @@ class GameState {
   final bool timerRunning;
   final bool isComplete;
   final bool isLoading;
+  final int hintsUsed;
+
+  static const int maxHints = 3;
 
   const GameState({
     required this.puzzle,
@@ -33,7 +36,10 @@ class GameState {
     this.timerRunning = false,
     this.isComplete = false,
     this.isLoading = false,
+    this.hintsUsed = 0,
   });
+
+  bool get canUseHint => hintsUsed < maxHints && !isComplete;
 
   bool get hasSelection => selectedRow != null && selectedCol != null;
 
@@ -75,6 +81,7 @@ class GameState {
     bool? timerRunning,
     bool? isComplete,
     bool? isLoading,
+    int? hintsUsed,
   }) {
     return GameState(
       puzzle: puzzle ?? this.puzzle,
@@ -87,6 +94,7 @@ class GameState {
       timerRunning: timerRunning ?? this.timerRunning,
       isComplete: isComplete ?? this.isComplete,
       isLoading: isLoading ?? this.isLoading,
+      hintsUsed: hintsUsed ?? this.hintsUsed,
     );
   }
 }
@@ -228,6 +236,65 @@ class GameNotifier extends Notifier<GameState> {
       isComplete: false,
     );
 
+    _saveAsync();
+  }
+
+  // ── Dica ───────────────────────────────────────────────────────────────
+
+  void useHint() {
+    if (!state.canUseHint) return;
+
+    _startTimerIfNeeded();
+
+    // Encontra celulas vazias ou erradas que podem receber dica
+    final candidates = <(int, int)>[];
+    for (int r = 0; r < 9; r++) {
+      for (int c = 0; c < 9; c++) {
+        if (state.puzzle.isClue(r, c)) continue;
+        final userVal = state.userBoard[r][c];
+        final solutionVal = state.puzzle.solutionAt(r, c);
+        if (userVal != solutionVal) {
+          candidates.add((r, c));
+        }
+      }
+    }
+
+    if (candidates.isEmpty) return;
+
+    // Se ha celula selecionada e ela e candidata, prioriza ela
+    (int, int) target;
+    if (state.hasSelection &&
+        candidates.contains((state.selectedRow!, state.selectedCol!))) {
+      target = (state.selectedRow!, state.selectedCol!);
+    } else {
+      // Escolhe aleatoriamente entre as candidatas
+      candidates.shuffle();
+      target = candidates.first;
+    }
+
+    final (row, col) = target;
+    final correctValue = state.puzzle.solutionAt(row, col);
+    final previous = state.userBoard[row][col];
+
+    final newBoard = _copyBoard(state.userBoard);
+    newBoard[row][col] = correctValue;
+
+    final newConflicts = _computeConflicts(newBoard, state.puzzle.clues);
+    final newUndo = [...state.undoStack, (row, col, previous)];
+    final complete = _checkComplete(newBoard, state.puzzle.clues, newConflicts);
+
+    state = state.copyWith(
+      userBoard: newBoard,
+      conflicts: newConflicts,
+      undoStack: newUndo,
+      hintsUsed: state.hintsUsed + 1,
+      selectedRow: row,
+      selectedCol: col,
+      isComplete: complete,
+      timerRunning: complete ? false : state.timerRunning,
+    );
+
+    if (complete) _timer?.cancel();
     _saveAsync();
   }
 
