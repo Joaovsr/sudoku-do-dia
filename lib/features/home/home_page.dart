@@ -59,126 +59,127 @@ class HomePage extends ConsumerWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 16),
-
-              // Botao de tema no canto superior direito
-              Align(
-                alignment: Alignment.centerRight,
-                child: IconButton(
-                  onPressed: () => _cycleTheme(ref),
-                  tooltip: _themeLabel(themeMode),
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, animation) => ScaleTransition(
-                      scale: animation,
-                      child: child,
-                    ),
-                    child: Icon(
-                      _themeIcon(themeMode),
-                      key: ValueKey(themeMode),
-                      color: c.timerColor,
-                      size: 22,
-                    ),
+        child: Stack(
+          children: [
+            // Botao de tema posicionado absolutamente (nao afeta layout central)
+            Positioned(
+              top: 16,
+              right: 24,
+              child: IconButton(
+                onPressed: () => _cycleTheme(ref),
+                tooltip: _themeLabel(themeMode),
+                icon: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, animation) => ScaleTransition(
+                    scale: animation,
+                    child: child,
                   ),
-                ),
-              ),
-
-              const Spacer(),
-
-              Text(
-                'sudoku do dia',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: c.clueColor,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2,
-                ),
-              ),
-
-              const SizedBox(height: 48),
-
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(color: c.borderThick, width: 1.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Jogo dirio',
-                            style: TextStyle(
-                              color: c.clueColor,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            _formatDate(today),
-                            style: TextStyle(
-                              color: c.timerColor,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    FilledButton(
-                      onPressed: () => _playToday(context, ref),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: c.userColor,
-                        foregroundColor: c.background,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Jogar',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              TextButton.icon(
-                onPressed: () => _openCalendar(context, ref),
-                icon: Icon(
-                  Icons.calendar_month_outlined,
-                  color: c.timerColor,
-                  size: 20,
-                ),
-                label: Text(
-                  'Jogos anteriores',
-                  style: TextStyle(
+                  child: Icon(
+                    _themeIcon(themeMode),
+                    key: ValueKey(themeMode),
                     color: c.timerColor,
-                    fontSize: 15,
+                    size: 22,
                   ),
                 ),
               ),
+            ),
 
-              const Spacer(),
-            ],
-          ),
+            // Conteudo centralizado
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'sudoku do dia',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: c.clueColor,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 2,
+                    ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: c.borderThick, width: 1.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Jogo diario',
+                                style: TextStyle(
+                                  color: c.clueColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatDate(today),
+                                style: TextStyle(
+                                  color: c.timerColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        FilledButton(
+                          onPressed: () => _playToday(context, ref),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: c.userColor,
+                            foregroundColor: c.background,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Jogar',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  TextButton.icon(
+                    onPressed: () => _openCalendar(context, ref),
+                    icon: Icon(
+                      Icons.calendar_month_outlined,
+                      color: c.timerColor,
+                      size: 20,
+                    ),
+                    label: Text(
+                      'Jogos anteriores',
+                      style: TextStyle(
+                        color: c.timerColor,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -22,15 +22,17 @@ class BoardPage extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
 
               const BoardHeader(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
-              const SudokuBoard(),
+              const Expanded(
+                child: Center(child: SudokuBoard()),
+              ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 12),
 
               if (isComplete)
                 TweenAnimationBuilder<double>(
@@ -42,7 +44,7 @@ class BoardPage extends ConsumerWidget {
                     child: child,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       'puzzle concluido',
                       textAlign: TextAlign.center,
@@ -57,7 +59,7 @@ class BoardPage extends ConsumerWidget {
 
               const NumpadWidget(),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
             ],
           ),
         ),
